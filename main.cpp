@@ -1,8 +1,52 @@
+/* Алгоритм:
+После ввода выржения строится постфиксная запись выражения. Далее вызываем функцию  expression(outstring),
+ которая строит бинарное дерево по постфиксной записи:
+ если fl = 1 когда это операнд
+ fl= -1 когда это оператор
+ Если операнд - записываем его в стек ,
+если  операция, то снимаем два числа из стека, помещаем в дерево, выполняем операцию.*/
 #include <iostream>
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
 using namespace std;
+
+char* getline()
+{
+    char* line = (char*)malloc(1024), *linep = line;
+    int lenmax = 100, len = lenmax;
+    int c;
+    if (!line)
+        return NULL;
+    while (1)
+    {
+        c = fgetc(stdin);
+        if (c == '\n' && linep == line)
+            continue;
+        if (c == EOF)
+            break;
+        if (--len == 0)
+        {
+            len = lenmax;
+            char* linen = (char*)realloc(linep, lenmax *= 2);
+            if (!linen)
+            {
+                free(linep);
+                return NULL;
+            }
+            line = linen + (line - linep);
+            linep = linen;
+        }
+        if ((*line++ = c) == '\n')
+            break;
+    }
+    *(line-1) = '\0';
+    *line = '\0';
+    return linep;
+}
+
+
+
 
 struct tree
 {
@@ -10,6 +54,7 @@ struct tree
     tree *left;
     tree *right;
 };
+
 struct st
 {
     char c;
@@ -44,7 +89,39 @@ char DEL(st **head)
 int i;
 char pf[1000];
 int p= -1;
-tree* f[1000];
+tree* __f[1000];
+
+struct TreeStack
+{
+    tree* t;
+    struct TreeStack *next;
+};
+
+TreeStack *f0 = NULL, *f_tail = NULL;
+
+
+struct TreeStack *push2(tree* t_)
+{
+    TreeStack *ptr;
+
+    ptr = new TreeStack;
+    ptr->t = t_;
+    ptr->next = NULL;
+
+    if (!f0)
+    {
+        f_tail = f0 = ptr;
+    }
+    else
+    {
+        f_tail->next = ptr;
+        f_tail = ptr;
+    }
+    return ptr;
+}
+
+
+
 int op(char a)
 {
     if (a=='+'|| a=='-'||a=='*'||a=='/')
@@ -56,13 +133,29 @@ int op(char a)
 }
 void push(tree *Tree)
 {
-    p++;
-    f[p] = Tree;
+    push2(Tree);
 }
 tree *pop()
 {
-    p--;
-    return (f[p + 1]);
+    TreeStack* ptr = f_tail;
+    tree* Tree = ptr->t;
+    //
+    if (f_tail == f0)
+    {
+        f0 = f_tail = NULL;
+    }
+    else
+    {
+        TreeStack* s = f0;
+        while (s->next->next)
+        {
+            s = s->next;
+        }
+        s->next = NULL;
+        f_tail = s;
+    }
+    delete ptr;
+    return Tree;
 }
 void expression(char *a)
 {
@@ -162,13 +255,14 @@ int PRIOR(char a)
 int main()
 {   setlocale(0, "Russian");
     struct st *OPERS=NULL;
-    char a[1000], outstring[1000];
+    char *a;
+    char outstring[1000];
     int k, point;
     do
     {
         puts("Введите выpажение:");
         fflush(stdin);
-        gets(a);
+        a = getline();
         k=point=0;
         while(a[k]!='\0'&&a[k]!='=')
         {
@@ -203,10 +297,10 @@ int main()
             outstring[point++]=DEL(&OPERS);
         outstring[point++]='\0';
         expression(outstring);
+        cout<<outstring<<endl;
+        show(f0->t,1);
         cout<<endl;
-        show(f[0],1);
-        cout<<endl;
-        cout<<"Результат:"<<calc(f[0]);
+        cout<<"Результат:"<<calc(f0->t);
 
     }
     while(getchar()!='n');
